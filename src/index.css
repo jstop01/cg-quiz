@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+  background-color: #f5f7fc;
+}
+
+#root {
+  min-height: 100vh;
+}
