@@ -1,14 +1,21 @@
-// 문제 하나
+// 문제 하나 (정답 후보 여러 개 + 오답 후보 여러 개)
 export interface Question {
   id: number;
   question: string;
-  choices: string[];
-  answer: number; // 0-based index
+  correctAnswers: string[];  // 매번 1개 랜덤 선택
+  wrongAnswers: string[];    // 매번 4개 랜덤 선택
   explanation: string;
   hint: string;
 }
 
-// 사용자 답안 기록 (문제 1개)
+// 세션용 문제 (뽑힌 직후 확정된 보기 5개)
+export interface QuizQuestion {
+  poolIndex: number;
+  choices: string[];   // 확정된 5개 보기 (이미 셔플됨)
+  answerIdx: number;   // 정답 위치 (0-4)
+}
+
+// 사용자 답안 기록
 export interface AnswerRecord {
   questionId: number;
   chosen: number;
@@ -40,5 +47,5 @@ export interface QuizState {
   noteCompleted: boolean;
   answers: AnswerRecord[];
   wrongNotes: WrongNote[];
-  questionOrder: number[]; // 셔플된 문제 인덱스 배열
+  quizQuestions: QuizQuestion[];
 }

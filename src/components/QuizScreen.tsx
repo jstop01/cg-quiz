@@ -15,31 +15,22 @@ interface Props {
 const choiceLabels = ["①", "②", "③", "④", "⑤"];
 
 export default function QuizScreen({ state, dispatch }: Props) {
-  const q = QUESTION_POOL[state.questionOrder[state.currentIndex]];
-  const isCorrect = state.submitted && state.chosen === q.answer;
-  const isWrong = state.submitted && state.chosen !== q.answer;
-  const canGoNext = state.submitted && (isCorrect || state.noteCompleted);
+  const qq = state.quizQuestions[state.currentIndex];
+  const q = QUESTION_POOL[qq.poolIndex];
 
+  const isCorrect = state.submitted && state.chosen === qq.answerIdx;
+  const isWrong = state.submitted && !isCorrect;
+  const canGoNext = state.submitted && (isCorrect || state.noteCompleted);
   const isSimpleMode = state.mode === "simple";
 
   return (
     <div className="min-h-screen px-4 py-6 md:py-10">
       <div className="max-w-2xl mx-auto">
-        {/* 모드 배지 */}
         <div className="flex items-center justify-between mb-3">
-          <span
-            className={`text-xs font-bold px-3 py-1 rounded-full ${
-              isSimpleMode
-                ? "bg-gray-700 text-white"
-                : "bg-gold text-white"
-            }`}
-          >
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${isSimpleMode ? "bg-gray-700 text-white" : "bg-gold text-white"}`}>
             {isSimpleMode ? "⚡ 일반 모드" : "📒 오답노트 모드"}
           </span>
-          <button
-            onClick={() => dispatch({ type: "RESET" })}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={() => dispatch({ type: "RESET" })} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
             처음으로
           </button>
         </div>
@@ -47,7 +38,6 @@ export default function QuizScreen({ state, dispatch }: Props) {
         <ProgressBar current={state.currentIndex} total={QUIZ_SIZE} />
 
         <div key={state.currentIndex} className="bg-white rounded-2xl shadow-md p-6 md:p-8">
-          {/* 문제 텍스트 */}
           <div className="mb-6">
             <span className="inline-block bg-navy text-white text-xs font-bold px-3 py-1 rounded-full mb-3">
               Q{state.currentIndex + 1}
@@ -57,39 +47,33 @@ export default function QuizScreen({ state, dispatch }: Props) {
             </h2>
           </div>
 
-          {/* 선택지 */}
           <ChoiceList
-            choices={q.choices}
+            choices={qq.choices}
             chosen={state.chosen}
             submitted={state.submitted}
-            answer={q.answer}
+            answer={qq.answerIdx}
             onSelect={(i) => dispatch({ type: "SELECT", payload: i })}
           />
 
-          {/* 제출 버튼 */}
           {!state.submitted && (
             <button
               onClick={() => dispatch({ type: "SUBMIT" })}
               disabled={state.chosen === null}
               className={`mt-6 w-full py-3 rounded-xl font-semibold text-lg transition-colors ${
-                state.chosen !== null
-                  ? "bg-navy text-white hover:bg-navy-light"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                state.chosen !== null ? "bg-navy text-white hover:bg-navy-light" : "bg-gray-200 text-gray-400 cursor-not-allowed"
               }`}
             >
               제출하기
             </button>
           )}
 
-          {/* 정오 판정 메시지 */}
           {state.submitted && (
             <ResultMessage
               isCorrect={isCorrect}
-              correctText={`${choiceLabels[q.answer]} ${q.choices[q.answer]}`}
+              correctText={`${choiceLabels[qq.answerIdx]} ${qq.choices[qq.answerIdx]}`}
             />
           )}
 
-          {/* 일반 모드: 오답일 때도 해설만 간단히 표시 */}
           {isSimpleMode && isWrong && state.submitted && (
             <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600">
               <p className="font-medium text-gray-700 mb-1">해설</p>
@@ -98,23 +82,21 @@ export default function QuizScreen({ state, dispatch }: Props) {
             </div>
           )}
 
-          {/* 오답노트 모드: 오답 시 오답노트 표시 */}
           {!isSimpleMode && isWrong && !state.noteCompleted && (
             <WrongNote
               question={q}
-              chosen={state.chosen!}
-              onComplete={(memo) =>
-                dispatch({ type: "COMPLETE_NOTE", payload: memo })
-              }
+              myAnswerText={qq.choices[state.chosen!]}
+              correctAnswerText={qq.choices[qq.answerIdx]}
+              correctAnswerPos={qq.answerIdx}
+              chosenPos={state.chosen!}
+              onComplete={(memo) => dispatch({ type: "COMPLETE_NOTE", payload: memo })}
             />
           )}
 
-          {/* 다음 문제 / 결과 보기 버튼 */}
           {canGoNext && (
             <button
               onClick={() => dispatch({ type: "NEXT" })}
-              className="mt-6 w-full bg-navy text-white font-semibold py-3 rounded-xl
-                         hover:bg-navy-light transition-colors text-lg"
+              className="mt-6 w-full bg-navy text-white font-semibold py-3 rounded-xl hover:bg-navy-light transition-colors text-lg"
             >
               {state.currentIndex === QUIZ_SIZE - 1 ? "결과 보기" : "다음 문제"}
             </button>

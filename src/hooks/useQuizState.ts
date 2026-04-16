@@ -1,17 +1,30 @@
 import { useReducer, useEffect } from "react";
-import type { QuizState, QuizMode, AnswerRecord, WrongNote } from "../types";
+import type { QuizState, QuizMode, QuizQuestion, AnswerRecord, WrongNote } from "../types";
 import { QUESTION_POOL, QUIZ_SIZE } from "../data/questions";
 
 const STORAGE_KEY = "cg_quiz_v1";
 
-/** 풀에서 QUIZ_SIZE개를 랜덤 추출한 인덱스 배열 반환 */
-function pickRandom(): number[] {
-  const indices = Array.from({ length: QUESTION_POOL.length }, (_, i) => i);
-  for (let i = indices.length - 1; i > 0; i--) {
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return indices.slice(0, QUIZ_SIZE);
+  return a;
+}
+
+function pickRandom(count = QUIZ_SIZE): QuizQuestion[] {
+  const indices = shuffleArray(Array.from({ length: QUESTION_POOL.length }, (_, i) => i));
+  return indices.slice(0, count).map((poolIndex) => {
+    const q = QUESTION_POOL[poolIndex];
+    // 정답 후보 중 1개 랜덤 선택
+    const correct = q.correctAnswers[Math.floor(Math.random() * q.correctAnswers.length)];
+    // 오답 후보 중 4개 랜덤 선택
+    const wrongs = shuffleArray(q.wrongAnswers).slice(0, 4);
+    // 5개 섞기
+    const choices = shuffleArray([correct, ...wrongs]);
+    return { poolIndex, choices, answerIdx: choices.indexOf(correct) };
+  });
 }
 
 type Action =
@@ -31,7 +44,7 @@ const defaultState: QuizState = {
   noteCompleted: false,
   answers: [],
   wrongNotes: [],
-  questionOrder: pickRandom(),
+  quizQuestions: pickRandom(),
 };
 
 function init(): QuizState {
@@ -39,27 +52,26 @@ function init(): QuizState {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (!parsed.questionOrder || parsed.questionOrder.length !== QUIZ_SIZE) {
+      if (!parsed.quizQuestions || parsed.quizQuestions.length !== QUIZ_SIZE) {
         localStorage.removeItem(STORAGE_KEY);
-        return { ...defaultState, questionOrder: pickRandom() };
+        return { ...defaultState, quizQuestions: pickRandom() };
       }
       return parsed;
     } catch {
-      return { ...defaultState, questionOrder: pickRandom() };
+      return { ...defaultState, quizQuestions: pickRandom() };
     }
   }
-  return { ...defaultState, questionOrder: pickRandom() };
+  return { ...defaultState, quizQuestions: pickRandom() };
 }
 
 function quizReducer(state: QuizState, action: Action): QuizState {
   switch (action.type) {
-    case "START":
-      return {
-        ...state,
-        screen: "quiz",
-        mode: action.payload,
-        questionOrder: state.answers.length > 0 ? state.questionOrder : pickRandom(),
-      };
+    case "START": {
+      if (state.answers.length > 0) {
+        return { ...state, screen: "quiz", mode: action.payload };
+      }
+      return { ...state, screen: "quiz", mode: action.payload, quizQuestions: pickRandom() };
+    }
 
     case "SELECT":
       if (state.submitted) return state;
@@ -67,14 +79,14 @@ function quizReducer(state: QuizState, action: Action): QuizState {
 
     case "SUBMIT": {
       if (state.chosen === null || state.submitted) return state;
-      const q = QUESTION_POOL[state.questionOrder[state.currentIndex]];
-      const isCorrect = state.chosen === q.answer;
+      const qq = state.quizQuestions[state.currentIndex];
+      const q = QUESTION_POOL[qq.poolIndex];
+      const isCorrect = state.chosen === qq.answerIdx;
 
       const record: AnswerRecord = {
         questionId: q.id,
         chosen: state.chosen,
         isCorrect,
-        // 일반 모드는 오답도 바로 완료 처리
         noteCompleted: isCorrect || state.mode === "simple",
       };
 
@@ -87,14 +99,15 @@ function quizReducer(state: QuizState, action: Action): QuizState {
     }
 
     case "COMPLETE_NOTE": {
-      const q = QUESTION_POOL[state.questionOrder[state.currentIndex]];
+      const qq = state.quizQuestions[state.currentIndex];
+      const q = QUESTION_POOL[qq.poolIndex];
       const choiceLabels = ["①", "②", "③", "④", "⑤"];
 
       const wrongNote: WrongNote = {
         questionId: q.id,
         question: q.question,
-        myAnswer: `${choiceLabels[state.chosen!]} ${q.choices[state.chosen!]}`,
-        correctAnswer: `${choiceLabels[q.answer]} ${q.choices[q.answer]}`,
+        myAnswer: `${choiceLabels[state.chosen!]} ${qq.choices[state.chosen!]}`,
+        correctAnswer: `${choiceLabels[qq.answerIdx]} ${qq.choices[qq.answerIdx]}`,
         explanation: q.explanation,
         hint: q.hint,
         memo: action.payload,
@@ -117,18 +130,13 @@ function quizReducer(state: QuizState, action: Action): QuizState {
       if (nextIndex >= QUIZ_SIZE) {
         return { ...state, screen: "result" };
       }
-      return {
-        ...state,
-        currentIndex: nextIndex,
-        submitted: false,
-        chosen: null,
-        noteCompleted: false,
-      };
+      return { ...state, currentIndex: nextIndex, submitted: false, chosen: null, noteCompleted: false };
     }
 
-    case "RESET":
+    case "RESET": {
       localStorage.removeItem(STORAGE_KEY);
-      return { ...defaultState, questionOrder: pickRandom() };
+      return { ...defaultState, quizQuestions: pickRandom() };
+    }
 
     default:
       return state;
