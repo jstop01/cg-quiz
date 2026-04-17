@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Dispatch } from "react";
 import type { QuizState } from "../types";
 import type { Action } from "../hooks/useQuizState";
-import { QUESTION_POOL } from "../data/questions";
+
 
 interface Props {
   state: QuizState;
@@ -136,7 +136,7 @@ export default function ResultScreen({ state, dispatch }: Props) {
         <button
           onClick={() => {
             dispatch({ type: "RESET" });
-            dispatch({ type: "START" });
+            dispatch({ type: "START", payload: state.mode });
           }}
           className="w-full bg-navy text-white font-semibold py-3 rounded-xl
                      hover:bg-navy-light transition-colors text-lg mb-8"

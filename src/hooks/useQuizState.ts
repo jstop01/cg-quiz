@@ -21,9 +21,12 @@ function pickRandom(count = QUIZ_SIZE): QuizQuestion[] {
     const correct = q.correctAnswers[Math.floor(Math.random() * q.correctAnswers.length)];
     // 오답 후보 중 4개 랜덤 선택
     const wrongs = shuffleArray(q.wrongAnswers).slice(0, 4);
-    // 5개 섞기
-    const choices = shuffleArray([correct, ...wrongs]);
-    return { poolIndex, choices, answerIdx: choices.indexOf(correct) };
+    // 5개 합친 뒤 인덱스 배열을 셔플하여 정답 위치 추적
+    const items = [correct, ...wrongs];
+    const order = shuffleArray([0, 1, 2, 3, 4]);
+    const choices = order.map((i) => items[i]);
+    const answerIdx = order.indexOf(0); // 0번이 정답(correct)
+    return { poolIndex, choices, answerIdx };
   });
 }
 
