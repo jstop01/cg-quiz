@@ -74,9 +74,13 @@ export default function QuizScreen({ state, dispatch }: Props) {
             />
           )}
 
-          {isSimpleMode && isWrong && state.submitted && (
-            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600">
-              <p className="font-medium text-gray-700 mb-1">해설</p>
+          {state.submitted && (isSimpleMode || isCorrect) && (
+            <div className={`mt-4 p-4 rounded-xl text-sm ${
+              isCorrect
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-gray-50 border border-gray-200 text-gray-600"
+            }`}>
+              <p className="font-medium mb-1">{isCorrect ? "해설" : "해설"}</p>
               <p>{q.explanation}</p>
               <p className="mt-2 font-medium text-gold">💡 {q.hint}</p>
             </div>
