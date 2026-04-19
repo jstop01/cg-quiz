@@ -2,7 +2,7 @@ import { useReducer, useEffect } from "react";
 import type { QuizState, QuizMode, QuizQuestion, AnswerRecord, WrongNote } from "../types";
 import { QUESTION_POOL, QUIZ_SIZE } from "../data/questions";
 
-const STORAGE_KEY = "cg_quiz_v1";
+const STORAGE_KEY = "cg_quiz_v2";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
