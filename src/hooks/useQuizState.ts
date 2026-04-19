@@ -1,5 +1,5 @@
 import { useReducer, useEffect } from "react";
-import type { QuizState, QuizMode, QuizQuestion, AnswerRecord, WrongNote } from "../types";
+import type { QuizState, QuizMode, QuizQuestion, AnswerRecord, WrongNote, WrongAnswer } from "../types";
 import { QUESTION_POOL, QUIZ_SIZE } from "../data/questions";
 
 const STORAGE_KEY = "cg_quiz_v5";
@@ -35,11 +35,15 @@ function shuffleArray<T>(arr: T[]): T[] {
   return result;
 }
 
-function buildChoices(correct: string, wrongs: string[]): { choices: string[]; answerIdx: number } {
+function buildChoices(correct: string, wrongs: WrongAnswer[]): { choices: string[]; answerIdx: number; whyWrong: (string | null)[] } {
   const answerIdx = secureRand(5);
-  const choices = [...wrongs];
+  const wrongTexts = wrongs.map(function getText(w) { return w.text; });
+  const wrongWhys = wrongs.map(function getWhy(w) { return w.why; });
+  const choices = [...wrongTexts];
   choices.splice(answerIdx, 0, correct);
-  return { choices, answerIdx };
+  const whyWrong: (string | null)[] = [...wrongWhys];
+  whyWrong.splice(answerIdx, 0, null);
+  return { choices, answerIdx, whyWrong };
 }
 
 function pickRandom(count: number = QUIZ_SIZE): QuizQuestion[] {
@@ -72,7 +76,7 @@ function pickRandom(count: number = QUIZ_SIZE): QuizQuestion[] {
     const correct = q.correctAnswers[secureRand(q.correctAnswers.length)];
     const wrongs = shuffleArray(q.wrongAnswers).slice(0, 4);
     const built = buildChoices(correct, wrongs);
-    quizQuestions.push({ poolIndex, choices: built.choices, answerIdx: built.answerIdx });
+    quizQuestions.push({ poolIndex, choices: built.choices, answerIdx: built.answerIdx, whyWrong: built.whyWrong });
   }
 
   // 디버그: 정답 위치 분포 확인 (배포 확인 후 제거)

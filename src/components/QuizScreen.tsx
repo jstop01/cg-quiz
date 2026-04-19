@@ -52,6 +52,7 @@ export default function QuizScreen({ state, dispatch }: Props) {
             chosen={state.chosen}
             submitted={state.submitted}
             answer={qq.answerIdx}
+            whyWrong={qq.whyWrong}
             onSelect={(i) => dispatch({ type: "SELECT", payload: i })}
           />
 

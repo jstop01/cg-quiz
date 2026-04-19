@@ -3,6 +3,7 @@ interface Props {
   chosen: number | null;
   submitted: boolean;
   answer: number;
+  whyWrong?: (string | null)[];
   onSelect: (index: number) => void;
 }
 
@@ -13,6 +14,7 @@ export default function ChoiceList({
   chosen,
   submitted,
   answer,
+  whyWrong,
   onSelect,
 }: Props) {
   function getStyle(index: number): string {
@@ -39,15 +41,21 @@ export default function ChoiceList({
   return (
     <div className="flex flex-col gap-3">
       {choices.map((choice, i) => (
-        <button
-          key={i}
-          onClick={() => !submitted && onSelect(i)}
-          className={getStyle(i)}
-          disabled={submitted}
-        >
-          <span className="mr-2 text-gray-400">{labels[i]}</span>
-          {choice}
-        </button>
+        <div key={i}>
+          <button
+            onClick={() => !submitted && onSelect(i)}
+            className={getStyle(i)}
+            disabled={submitted}
+          >
+            <span className="mr-2 text-gray-400">{labels[i]}</span>
+            {choice}
+          </button>
+          {submitted && whyWrong && whyWrong[i] && (
+            <p className="mt-1 ml-8 text-xs text-red-400">
+              → {whyWrong[i]}
+            </p>
+          )}
+        </div>
       ))}
     </div>
   );

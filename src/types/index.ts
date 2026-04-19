@@ -1,9 +1,14 @@
 // 문제 하나 (정답 후보 여러 개 + 오답 후보 여러 개)
+export interface WrongAnswer {
+  text: string;
+  why: string;       // 왜 틀린지 한 줄 설명
+}
+
 export interface Question {
   id: number;
   question: string;
-  correctAnswers: string[];  // 매번 1개 랜덤 선택
-  wrongAnswers: string[];    // 매번 4개 랜덤 선택
+  correctAnswers: string[];      // 매번 1개 랜덤 선택
+  wrongAnswers: WrongAnswer[];   // 매번 4개 랜덤 선택
   explanation: string;
   hint: string;
 }
@@ -11,8 +16,9 @@ export interface Question {
 // 세션용 문제 (뽑힌 직후 확정된 보기 5개)
 export interface QuizQuestion {
   poolIndex: number;
-  choices: string[];   // 확정된 5개 보기 (이미 셔플됨)
-  answerIdx: number;   // 정답 위치 (0-4)
+  choices: string[];          // 확정된 5개 보기 (이미 셔플됨)
+  answerIdx: number;          // 정답 위치 (0-4)
+  whyWrong: (string | null)[]; // 각 선택지별 오답 이유 (정답은 null)
 }
 
 // 사용자 답안 기록
