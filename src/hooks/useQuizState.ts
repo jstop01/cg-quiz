@@ -2,10 +2,16 @@ import { useReducer, useEffect } from "react";
 import type { QuizState, QuizMode, QuizQuestion, AnswerRecord, WrongNote } from "../types";
 import { QUESTION_POOL, QUIZ_SIZE } from "../data/questions";
 
-const STORAGE_KEY = "cg_quiz_v4";
+const STORAGE_KEY = "cg_quiz_v5";
 const HISTORY_KEY = "cg_quiz_history";
 
-/** 문제별 정답 이력: { [questionId]: 연속 정답 횟수 } */
+/** crypto 기반 난수 (0 ~ max-1) */
+function secureRand(max: number): number {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % max;
+}
+
 function getHistory(): Record<number, number> {
   try {
     return JSON.parse(localStorage.getItem(HISTORY_KEY) || "{}");
@@ -19,54 +25,64 @@ function saveHistory(history: Record<number, number>) {
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  const result = [...arr];
+  for (let idx = result.length - 1; idx > 0; idx--) {
+    const swapIdx = secureRand(idx + 1);
+    const tmp = result[idx];
+    result[idx] = result[swapIdx];
+    result[swapIdx] = tmp;
   }
-  return a;
+  return result;
 }
 
-/** 가중치 기반 문제 선택: 연속 정답이 많을수록 출제 확률↓ */
-function pickRandom(count = QUIZ_SIZE): QuizQuestion[] {
+function buildChoices(correct: string, wrongs: string[]): { choices: string[]; answerIdx: number } {
+  const answerIdx = secureRand(5);
+  const choices = [...wrongs];
+  choices.splice(answerIdx, 0, correct);
+  return { choices, answerIdx };
+}
+
+function pickRandom(count: number = QUIZ_SIZE): QuizQuestion[] {
   const history = getHistory();
 
-  // 각 문제에 가중치 부여: 연속정답 0→10, 1→4, 2→1, 3+→0.2
-  const weights = QUESTION_POOL.map((q, i) => {
+  const weights = QUESTION_POOL.map(function mapWeight(q, idx) {
     const streak = history[q.id] || 0;
-    if (streak === 0) return { idx: i, w: 10 };
-    if (streak === 1) return { idx: i, w: 4 };
-    if (streak === 2) return { idx: i, w: 1 };
-    return { idx: i, w: 0.2 };
+    const w = streak === 0 ? 10 : streak === 1 ? 4 : streak === 2 ? 1 : 0.2;
+    return { idx, w };
   });
 
-  // 가중치 기반 비복원 추출
   const picked: number[] = [];
-  const pool = [...weights];
-  for (let n = 0; n < count && pool.length > 0; n++) {
-    const totalW = pool.reduce((s, p) => s + p.w, 0);
-    let r = Math.random() * totalW;
-    let chosen = pool.length - 1;
-    for (let i = 0; i < pool.length; i++) {
-      r -= pool[i].w;
-      if (r <= 0) { chosen = i; break; }
+  const remaining = [...weights];
+  for (let step = 0; step < count && remaining.length > 0; step++) {
+    const totalW = remaining.reduce(function sum(acc, cur) { return acc + cur.w; }, 0);
+    let rand = Math.random() * totalW;
+    let chosenIdx = remaining.length - 1;
+    for (let k = 0; k < remaining.length; k++) {
+      rand -= remaining[k].w;
+      if (rand <= 0) { chosenIdx = k; break; }
     }
-    picked.push(pool[chosen].idx);
-    pool.splice(chosen, 1);
+    picked.push(remaining[chosenIdx].idx);
+    remaining.splice(chosenIdx, 1);
   }
 
-  return picked.map((poolIndex) => {
+  const quizQuestions: QuizQuestion[] = [];
+  for (let p = 0; p < picked.length; p++) {
+    const poolIndex = picked[p];
     const q = QUESTION_POOL[poolIndex];
-    const correct = q.correctAnswers[Math.floor(Math.random() * q.correctAnswers.length)];
+    const correct = q.correctAnswers[secureRand(q.correctAnswers.length)];
     const wrongs = shuffleArray(q.wrongAnswers).slice(0, 4);
-    const answerIdx = Math.floor(Math.random() * 5);
-    const choices: string[] = [];
-    let wi = 0;
-    for (let i = 0; i < 5; i++) {
-      choices.push(i === answerIdx ? correct : wrongs[wi++]);
-    }
-    return { poolIndex, choices, answerIdx };
-  });
+    const built = buildChoices(correct, wrongs);
+    quizQuestions.push({ poolIndex, choices: built.choices, answerIdx: built.answerIdx });
+  }
+
+  // 디버그: 정답 위치 분포 확인 (배포 확인 후 제거)
+  if (typeof console !== "undefined") {
+    const dist = [0, 0, 0, 0, 0];
+    quizQuestions.forEach(function countPos(qq) { dist[qq.answerIdx]++; });
+    console.log("[CG-Quiz v5] 정답 위치 분포:", dist.map(function fmt(d, i) { return (i + 1) + "번:" + d; }).join(", "));
+  }
+
+  return quizQuestions;
 }
 
 type Action =

@@ -55,6 +55,8 @@ export default function StartScreen({ dispatch, hasProgress }: Props) {
           </button>
         </div>
 
+        <p className="text-xs text-gray-300 mb-4">v4 · 160문항 · 적응형 출제</p>
+
         {hasProgress && (
           <button
             onClick={() => {
