@@ -2,7 +2,7 @@ import { useReducer, useEffect } from "react";
 import type { QuizState, QuizMode, QuizQuestion, AnswerRecord, WrongNote } from "../types";
 import { QUESTION_POOL, QUIZ_SIZE } from "../data/questions";
 
-const STORAGE_KEY = "cg_quiz_v2";
+const STORAGE_KEY = "cg_quiz_v3";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -21,11 +21,13 @@ function pickRandom(count = QUIZ_SIZE): QuizQuestion[] {
     const correct = q.correctAnswers[Math.floor(Math.random() * q.correctAnswers.length)];
     // 오답 후보 중 4개 랜덤 선택
     const wrongs = shuffleArray(q.wrongAnswers).slice(0, 4);
-    // 5개 합친 뒤 인덱스 배열을 셔플하여 정답 위치 추적
-    const items = [correct, ...wrongs];
-    const order = shuffleArray([0, 1, 2, 3, 4]);
-    const choices = order.map((i) => items[i]);
-    const answerIdx = order.indexOf(0); // 0번이 정답(correct)
+    // 정답 위치를 직접 랜덤 지정 (0~4 균등)
+    const answerIdx = Math.floor(Math.random() * 5);
+    const choices: string[] = [];
+    let wi = 0;
+    for (let i = 0; i < 5; i++) {
+      choices.push(i === answerIdx ? correct : wrongs[wi++]);
+    }
     return { poolIndex, choices, answerIdx };
   });
 }
