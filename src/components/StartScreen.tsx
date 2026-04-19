@@ -58,7 +58,7 @@ export default function StartScreen({ dispatch, hasProgress }: Props) {
         {hasProgress && (
           <button
             onClick={() => {
-              dispatch({ type: "RESET" });
+              dispatch({ type: "RESET_ALL" });
             }}
             className="w-full mt-1 bg-gray-100 text-gray-500 font-medium py-2.5 px-6 rounded-xl
                        hover:bg-gray-200 transition-colors text-sm"
