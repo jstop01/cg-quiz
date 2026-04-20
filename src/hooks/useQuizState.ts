@@ -74,7 +74,15 @@ function pickRandom(count: number = QUIZ_SIZE): QuizQuestion[] {
     const poolIndex = picked[p];
     const q = QUESTION_POOL[poolIndex];
     const correct = q.correctAnswers[secureRand(q.correctAnswers.length)];
-    const wrongs = shuffleArray(q.wrongAnswers).slice(0, 4);
+    // 정답과 길이가 비슷한 오답 우선 선택 (길이로 정답 유추 방지)
+    const correctLen = correct.length;
+    const sorted = [...q.wrongAnswers].sort(function byLenDiff(a, b) {
+      return Math.abs(a.text.length - correctLen) - Math.abs(b.text.length - correctLen);
+    });
+    // 가장 비슷한 5개 중에서 4개를 랜덤 선택 (풀이 충분하면)
+    const candidateCount = Math.min(sorted.length, Math.max(5, sorted.length));
+    const candidates = sorted.slice(0, candidateCount);
+    const wrongs = shuffleArray(candidates).slice(0, 4);
     const built = buildChoices(correct, wrongs);
     quizQuestions.push({ poolIndex, choices: built.choices, answerIdx: built.answerIdx, whyWrong: built.whyWrong });
   }
